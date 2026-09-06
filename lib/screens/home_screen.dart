@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'vista_consulta_screen.dart';
 import 'registrar_doctor_screen.dart';
-import 'registrar_paciente_screen.dart';
+//import 'registrar_paciente_screen.dart';
 import 'actualizar_cita_screen.dart';
-import 'actualizar_doctor_screen.dart';
+//import 'actualizar_doctor_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -23,7 +23,7 @@ class HomeScreen extends StatelessWidget {
           _buildCard(
             context,
             title: '1. Ver Consulta General',
-            subtitle: 'GET: Vista Distribuida (Sitio A + B)',
+            subtitle: 'GET: Vista Distribuida',
             icon: Icons.visibility,
             color: Colors.blue,
             screen: const VistaConsultaScreen(),
@@ -36,14 +36,14 @@ class HomeScreen extends StatelessWidget {
             color: Colors.green,
             screen: const RegistrarDoctorScreen(),
           ),
-          _buildCard(
+         /* _buildCard(
             context,
             title: '3. Registrar Paciente',
             subtitle: 'POST: SP Insert en Sitio A',
             icon: Icons.personal_injury,
             color: Colors.teal,
             screen: const RegistrarPacienteScreen(),
-          ),
+          ),*/
           _buildCard(
             context,
             title: '4. Actualizar Cita Médica',
@@ -52,14 +52,14 @@ class HomeScreen extends StatelessWidget {
             color: Colors.orange,
             screen: const ActualizarCitaScreen(),
           ),
-          _buildCard(
+         /* _buildCard(
             context,
             title: '5. Actualizar Doctor',
             subtitle: 'PUT: SP Update en Sitio B',
             icon: Icons.manage_accounts,
             color: Colors.purple,
             screen: const ActualizarDoctorScreen(),
-          ),
+          ),*/
         ],
       ),
     );

@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/consulta_model.dart';
 
 class ApiService {
-  static const String baseUrl = "http://localhost:5000/api/medicity/distribuida";
+  static const String baseUrl = "http://localhost:5086/api/medicity/distribuida";
 
   static Future<List<ConsultaGeneral>> getConsultaGeneral() async {
     final response = await http.get(Uri.parse('$baseUrl/view'));
@@ -46,20 +46,22 @@ class ApiService {
     throw Exception(data['mensaje'] ?? 'Error al insertar paciente');
   }
 
-  static Future<String> actualizarCita(int id, int idPaciente, int idDoctor, String fechaHora) async {
-    final response = await http.put(
-      Uri.parse('$baseUrl/sp_cita/$id'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'idPaciente': idPaciente,
-        'idDoctor': idDoctor,
-        'fechaHora': fechaHora,
-      }),
-    );
-    final data = json.decode(response.body);
-    if (response.statusCode == 200) return data['mensaje'] ?? 'Cita actualizada';
-    throw Exception(data['mensaje'] ?? 'Error al actualizar cita');
-  }
+static Future<String> actualizarCita(int id, int idPaciente, int idDoctor, String fechaHora) async {
+  final fechaFormateada = fechaHora.contains('T') ? fechaHora : fechaHora.replaceFirst(' ', 'T');
+
+  final response = await http.put(
+    Uri.parse('$baseUrl/sp_cita/$id'),
+    headers: {'Content-Type': 'application/json'},
+    body: json.encode({
+      'idPaciente': idPaciente,
+      'idDoctor': idDoctor,
+      'fechaHora': fechaFormateada,
+    }),
+  );
+  final data = json.decode(response.body);
+  if (response.statusCode == 200) return data['mensaje'] ?? 'Cita actualizada';
+  throw Exception(data['mensaje'] ?? 'Error al actualizar cita');
+}
 
   static Future<String> actualizarDoctor(int id, String nombre, int idEspecialidad, int idCiudad) async {
     final response = await http.put(
