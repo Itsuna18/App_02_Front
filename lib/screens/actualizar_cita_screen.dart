@@ -279,7 +279,6 @@ class _ActualizarCitaScreenState extends State<ActualizarCitaScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Campo ID Paciente: SOLO NÚMEROS
                       TextFormField(
                         controller: _idPacienteCtrl,
                         keyboardType: TextInputType.number,

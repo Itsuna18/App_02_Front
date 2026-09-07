@@ -14,29 +14,63 @@ class _RegistrarPacienteScreenState extends State<RegistrarPacienteScreen> {
   final _nombreCtrl = TextEditingController();
   final _fechaCtrl = TextEditingController(text: '1998-05-15');
   final _dirCtrl = TextEditingController();
-  final _ciudadCtrl = TextEditingController();
+
+  int? _selectedCiudadId;
+  List<Map<String, dynamic>> _ciudades = [];
+
   bool _loading = false;
+  bool _loadingCiudades = true;
+
+  static const Color _primaryColor = Color(0xFF00796B);
+  static const Color _accentLight = Color(0xFFE0F2F1);
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarCiudades();
+  }
+
+  Future<void> _cargarCiudades() async {
+    setState(() => _loadingCiudades = true);
+    try {
+      final list = await ApiService.getCiudades();
+      if (mounted) {
+        setState(() {
+          _ciudades = list;
+          if (_ciudades.isNotEmpty) {
+            _selectedCiudadId = _ciudades.first['id'];
+          }
+          _loadingCiudades = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingCiudades = false);
+    }
+  }
 
   @override
   void dispose() {
     _nombreCtrl.dispose();
     _fechaCtrl.dispose();
     _dirCtrl.dispose();
-    _ciudadCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _seleccionarFecha() async {
-    DateTime initial = DateTime.tryParse(_fechaCtrl.text) ?? DateTime(1998, 5, 15);
+    DateTime initial = DateTime(1998, 5, 15);
+    try {
+      final parsed = DateTime.tryParse(_fechaCtrl.text);
+      if (parsed != null) initial = parsed;
+    } catch (_) {}
+
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: initial,
-      firstDate: DateTime(1900),
+      firstDate: DateTime(1920),
       lastDate: DateTime.now(),
-      helpText: 'Seleccione Fecha de Nacimiento',
-      cancelText: 'Cancelar',
-      confirmText: 'Aceptar',
+      helpText: 'Seleccionar Fecha de Nacimiento',
     );
+
     if (picked != null) {
       final y = picked.year.toString().padLeft(4, '0');
       final m = picked.month.toString().padLeft(2, '0');
@@ -52,13 +86,20 @@ class _RegistrarPacienteScreenState extends State<RegistrarPacienteScreen> {
       return;
     }
 
+    if (_selectedCiudadId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Seleccione una ciudad v�lida'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
     setState(() => _loading = true);
     try {
       final msg = await ApiService.insertarPaciente(
         _nombreCtrl.text.trim(),
         _fechaCtrl.text.trim(),
         _dirCtrl.text.trim(),
-        _ciudadCtrl.text.trim(),
+        _selectedCiudadId!,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -70,16 +111,11 @@ class _RegistrarPacienteScreenState extends State<RegistrarPacienteScreen> {
                 Expanded(child: Text(msg)),
               ],
             ),
-            backgroundColor: Colors.teal.shade700,
+            backgroundColor: _primaryColor,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
-        _formKey.currentState!.reset();
-        _nombreCtrl.clear();
-        _dirCtrl.clear();
-        _ciudadCtrl.clear();
-        _fechaCtrl.text = '1998-05-15';
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -109,190 +145,173 @@ class _RegistrarPacienteScreenState extends State<RegistrarPacienteScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F7F8),
       appBar: AppBar(
         title: const Text('Registrar Paciente'),
-        backgroundColor: Colors.teal.shade700,
+        backgroundColor: _primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 2,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(18.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                elevation: 3,
-                color: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: Colors.teal.shade50,
-                            child: Icon(Icons.personal_injury, color: Colors.teal.shade700),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+      body: _loadingCiudades
+          ? const Center(child: CircularProgressIndicator(color: _primaryColor))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(18.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Card(
+                      elevation: 2,
+                      color: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
-                                const Text(
-                                  'Datos del Paciente',
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                const CircleAvatar(
+                                  backgroundColor: _accentLight,
+                                  child: Icon(Icons.person_add_alt_1, color: _primaryColor),
                                 ),
-                                Text(
-                                  'Ingrese los datos del nuevo paciente',
-                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                const SizedBox(width: 12),
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Nuevo Paciente (Sitio A)',
+                                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                                      ),
+                                      Text(
+                                        'Inserta el paciente en la base de datos local',
+                                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
-                      const Divider(height: 28),
+                            const Divider(height: 28),
 
-                      // Campo Nombre del Paciente: SOLO LETRAS
-                      TextFormField(
-                        controller: _nombreCtrl,
-                        keyboardType: TextInputType.name,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
-                        ],
-                        decoration: const InputDecoration(
-                          labelText: 'Nombre Completo del Paciente',
-                          hintText: 'Ej. Juan Antonio Pérez',
-                          prefixIcon: Icon(Icons.person, color: Colors.teal),
-                          helperText: 'Solo se permiten letras y espacios',
-                        ),
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
-                            return 'El nombre es obligatorio';
-                          }
-                          if (val.trim().length < 3) {
-                            return 'Debe ingresar al menos 3 caracteres';
-                          }
-                          if (!RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$').hasMatch(val.trim())) {
-                            return 'El nombre solo puede contener letras';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
+                            // Campo Nombre
+                            TextFormField(
+                              controller: _nombreCtrl,
+                              keyboardType: TextInputType.name,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z������������\s]')),
+                              ],
+                              decoration: InputDecoration(
+                                labelText: 'Nombre del Paciente',
+                                hintText: 'Ej. Juan P�rez',
+                                prefixIcon: const Icon(Icons.person, color: _primaryColor),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: Color(0xFF80CBC4)),
+                                ),
+                              ),
+                              validator: (val) {
+                                if (val == null || val.trim().isEmpty) return 'El nombre es obligatorio';
+                                if (val.trim().length < 3) return 'M�nimo 3 caracteres';
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 18),
 
-                      // Campo Fecha de Nacimiento: con selector
-                      TextFormField(
-                        controller: _fechaCtrl,
-                        keyboardType: TextInputType.datetime,
-                        decoration: InputDecoration(
-                          labelText: 'Fecha de Nacimiento',
-                          hintText: 'AAAA-MM-DD',
-                          prefixIcon: const Icon(Icons.calendar_month, color: Colors.teal),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.edit_calendar, color: Colors.teal),
-                            onPressed: _seleccionarFecha,
-                            tooltip: 'Seleccionar fecha',
-                          ),
-                          helperText: 'Formato: AAAA-MM-DD',
-                        ),
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
-                            return 'La fecha de nacimiento es obligatoria';
-                          }
-                          final regex = RegExp(r'^\d{4}-\d{2}-\d{2}$');
-                          if (!regex.hasMatch(val.trim())) {
-                            return 'Formato inválido. Use AAAA-MM-DD';
-                          }
-                          final parsed = DateTime.tryParse(val.trim());
-                          if (parsed == null) {
-                            return 'Fecha no válida';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
+                            // Campo Fecha de Nacimiento con Selector
+                            TextFormField(
+                              controller: _fechaCtrl,
+                              readOnly: true,
+                              onTap: _seleccionarFecha,
+                              decoration: InputDecoration(
+                                labelText: 'Fecha de Nacimiento',
+                                prefixIcon: const Icon(Icons.calendar_today, color: _primaryColor),
+                                suffixIcon: const Icon(Icons.arrow_drop_down, color: _primaryColor),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: Color(0xFF80CBC4)),
+                                ),
+                              ),
+                              validator: (val) => val == null || val.trim().isEmpty ? 'Seleccione una fecha' : null,
+                            ),
+                            const SizedBox(height: 18),
 
-                      // Campo Dirección
-                      TextFormField(
-                        controller: _dirCtrl,
-                        keyboardType: TextInputType.streetAddress,
-                        decoration: const InputDecoration(
-                          labelText: 'Dirección Domiciliaria',
-                          hintText: 'Ej. Av. 9 de Octubre y Malecón',
-                          prefixIcon: Icon(Icons.home, color: Colors.teal),
-                          helperText: 'Dirección de residencia',
-                        ),
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
-                            return 'La dirección es obligatoria';
-                          }
-                          if (val.trim().length < 4) {
-                            return 'Debe ingresar una dirección más detallada';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _dirCtrl,
+                              decoration: InputDecoration(
+                                labelText: 'Direccion de Residencia',
+                                hintText: 'Ej. Av. Cevallos y Castillo',
+                                prefixIcon: const Icon(Icons.home, color: _primaryColor),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: Color(0xFF80CBC4)),
+                                ),
+                              ),
+                              validator: (val) {
+                                if (val == null || val.trim().isEmpty) return 'La direccion es obligatoria';
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 18),
 
-                      // Campo Ciudad: SOLO LETRAS
-                      TextFormField(
-                        controller: _ciudadCtrl,
-                        keyboardType: TextInputType.text,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
-                        ],
-                        decoration: const InputDecoration(
-                          labelText: 'Ciudad',
-                          hintText: 'Ej. Guayaquil, Quito, Ambato',
-                          prefixIcon: Icon(Icons.location_city, color: Colors.teal),
-                          helperText: 'Solo se permiten letras y espacios',
+                            // Desplegable de Ciudades Reales
+                            DropdownButtonFormField<int>(
+                              initialValue: _selectedCiudadId,
+                              decoration: InputDecoration(
+                                labelText: 'Ciudad (Registrada en Sitio A)',
+                                prefixIcon: const Icon(Icons.location_city, color: _primaryColor),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: Color(0xFF80CBC4)),
+                                ),
+                              ),
+                              items: _ciudades.map((c) {
+                                final id = c['id'] as int;
+                                final nombre = (c['nombre'] ?? '').toString();
+                                return DropdownMenuItem<int>(
+                                  value: id,
+                                  child: Text('ID $id - $nombre'),
+                                );
+                              }).toList(),
+                              onChanged: (val) => setState(() => _selectedCiudadId = val),
+                              validator: (val) => val == null ? 'Seleccione una ciudad' : null,
+                            ),
+                          ],
                         ),
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
-                            return 'La ciudad es obligatoria';
-                          }
-                          if (val.trim().length < 3) {
-                            return 'Debe ingresar al menos 3 caracteres';
-                          }
-                          if (!RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$').hasMatch(val.trim())) {
-                            return 'Solo se permiten letras y espacios';
-                          }
-                          return null;
-                        },
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: _loading ? null : _guardar,
+                      icon: _loading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.save),
+                      label: Text(
+                        _loading ? 'Guardando...' : 'Guardar Paciente (SP 2)',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 2,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: _loading ? null : _guardar,
-                icon: _loading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Icon(Icons.save),
-                label: Text(
-                  _loading ? 'Guardando...' : 'Guardar Paciente',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal.shade700,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 3,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 }

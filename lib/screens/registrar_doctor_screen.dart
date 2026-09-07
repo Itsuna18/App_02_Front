@@ -1,12 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/api_service.dart';
-import '../widgets/especialidad_autocomplete.dart';
 
 class RegistrarDoctorScreen extends StatefulWidget {
-  final List<String>? especialidadesDisponibles;
-
-  const RegistrarDoctorScreen({super.key, this.especialidadesDisponibles});
+  const RegistrarDoctorScreen({super.key});
 
   @override
   State<RegistrarDoctorScreen> createState() => _RegistrarDoctorScreenState();
@@ -15,17 +12,57 @@ class RegistrarDoctorScreen extends StatefulWidget {
 class _RegistrarDoctorScreenState extends State<RegistrarDoctorScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nombreCtrl = TextEditingController();
-  final _espCtrl = TextEditingController();
-  final _ciudadCtrl = TextEditingController();
+
+  int? _selectedEspecialidadId;
+  int? _selectedCiudadId;
+
+  List<Map<String, dynamic>> _especialidades = [];
+  List<Map<String, dynamic>> _ciudades = [];
+
   bool _loading = false;
+  bool _loadingCatalogos = true;
 
   static const Color _primaryColor = Color(0xFF00796B);
+  static const Color _accentLight = Color(0xFFE0F2F1);
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarCatalogos();
+  }
+
+  Future<void> _cargarCatalogos() async {
+    setState(() => _loadingCatalogos = true);
+    try {
+      final results = await Future.wait([
+        ApiService.getEspecialidades(),
+        ApiService.getCiudades(),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _especialidades = results[0];
+          _ciudades = results[1];
+
+          if (_especialidades.isNotEmpty) {
+            _selectedEspecialidadId = _especialidades.first['id'];
+          }
+          if (_ciudades.isNotEmpty) {
+            _selectedCiudadId = _ciudades.first['id'];
+          }
+          _loadingCatalogos = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _loadingCatalogos = false);
+      }
+    }
+  }
 
   @override
   void dispose() {
     _nombreCtrl.dispose();
-    _espCtrl.dispose();
-    _ciudadCtrl.dispose();
     super.dispose();
   }
 
@@ -34,12 +71,19 @@ class _RegistrarDoctorScreenState extends State<RegistrarDoctorScreen> {
       return;
     }
 
+    if (_selectedEspecialidadId == null || _selectedCiudadId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Seleccione una especialidad y una ciudad v�lidas'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
     setState(() => _loading = true);
     try {
       final msg = await ApiService.insertarDoctor(
         _nombreCtrl.text.trim(),
-        _espCtrl.text.trim(),
-        _ciudadCtrl.text.trim(),
+        _selectedEspecialidadId!,
+        _selectedCiudadId!,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -85,150 +129,164 @@ class _RegistrarDoctorScreenState extends State<RegistrarDoctorScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F7F8),
       appBar: AppBar(
         title: const Text('Registrar Doctor'),
         backgroundColor: _primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 2,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(18.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                elevation: 2,
-                color: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: _primaryColor.withValues(alpha: 0.12),
-                            child: const Icon(Icons.person_add, color: _primaryColor),
-                          ),
-                          const SizedBox(width: 12),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+      body: _loadingCatalogos
+          ? const Center(child: CircularProgressIndicator(color: _primaryColor))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(18.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Card(
+                      elevation: 2,
+                      color: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
-                                Text(
-                                  'Datos del Doctor',
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                const CircleAvatar(
+                                  backgroundColor: _accentLight,
+                                  child: Icon(Icons.person_add, color: _primaryColor),
                                 ),
-                                Text(
-                                  'Ingrese los datos del nuevo médico',
-                                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                                const SizedBox(width: 12),
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Nuevo Doctor',
+                                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                                      ),
+                                      Text(
+                                        'Inserta directamente en la base de datos remota',
+                                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
-                      const Divider(height: 28),
+                            const Divider(height: 28),
 
-                      // Campo Nombre: SOLO LETRAS
-                      TextFormField(
-                        controller: _nombreCtrl,
-                        keyboardType: TextInputType.name,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
-                        ],
-                        decoration: const InputDecoration(
-                          labelText: 'Nombre Completo del Doctor',
-                          hintText: 'Ej. Dr. Carlos Andrade',
-                          prefixIcon: Icon(Icons.person, color: _primaryColor),
-                          helperText: 'Solo se permiten letras y espacios',
+                            // Campo Nombre
+                            TextFormField(
+                              controller: _nombreCtrl,
+                              keyboardType: TextInputType.name,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z������������\s]')),
+                              ],
+                              decoration: InputDecoration(
+                                labelText: 'Nombre Completo del Doctor',
+                                hintText: 'Ej. Dr. Carlos Andrade',
+                                prefixIcon: const Icon(Icons.person, color: _primaryColor),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: Color(0xFF80CBC4)),
+                                ),
+                              ),
+                              validator: (val) {
+                                if (val == null || val.trim().isEmpty) {
+                                  return 'El nombre es obligatorio';
+                                }
+                                if (val.trim().length < 3) {
+                                  return 'Debe ingresar al menos 3 caracteres';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 18),
+
+                            // Desplegable de Especialidades Reales de la BD
+                            DropdownButtonFormField<int>(
+                              initialValue: _selectedEspecialidadId,
+                              decoration: InputDecoration(
+                                labelText: 'Especialidad (Registrada en Sitio B)',
+                                prefixIcon: const Icon(Icons.medical_services, color: _primaryColor),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: Color(0xFF80CBC4)),
+                                ),
+                              ),
+                              items: _especialidades.map((e) {
+                                final id = e['id'] as int;
+                                final nombre = (e['nombre'] ?? '').toString();
+                                return DropdownMenuItem<int>(
+                                  value: id,
+                                  child: Text('ID $id - $nombre'),
+                                );
+                              }).toList(),
+                              onChanged: (val) => setState(() => _selectedEspecialidadId = val),
+                              validator: (val) => val == null ? 'Seleccione una especialidad' : null,
+                            ),
+                            const SizedBox(height: 18),
+
+                            // Desplegable de Ciudades Reales de la BD
+                            DropdownButtonFormField<int>(
+                              initialValue: _selectedCiudadId,
+                              decoration: InputDecoration(
+                                labelText: 'Ciudad (Registrada en Sitio A)',
+                                prefixIcon: const Icon(Icons.location_city, color: _primaryColor),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: Color(0xFF80CBC4)),
+                                ),
+                              ),
+                              items: _ciudades.map((c) {
+                                final id = c['id'] as int;
+                                final nombre = (c['nombre'] ?? '').toString();
+                                return DropdownMenuItem<int>(
+                                  value: id,
+                                  child: Text('ID $id - $nombre'),
+                                );
+                              }).toList(),
+                              onChanged: (val) => setState(() => _selectedCiudadId = val),
+                              validator: (val) => val == null ? 'Seleccione una ciudad' : null,
+                            ),
+                          ],
                         ),
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
-                            return 'El nombre es obligatorio';
-                          }
-                          if (val.trim().length < 3) {
-                            return 'Debe ingresar al menos 3 caracteres';
-                          }
-                          if (!RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$').hasMatch(val.trim())) {
-                            return 'El nombre solo puede contener letras';
-                          }
-                          return null;
-                        },
                       ),
-                      const SizedBox(height: 16),
-
-                      // Campo Especialidad: COMBO AUTOCOMPLETO + SOLO LETRAS
-                      EspecialidadAutocomplete(
-                        controller: _espCtrl,
-                        primaryColor: _primaryColor,
-                        especialidadesDisponibles: widget.especialidadesDisponibles ?? const [
-                          'Cardiología',
-                          'Pediatría',
-                          'Medicina General',
-                          'Especialidad 1',
-                          'Especialidad 2',
-                        ],
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: _loading ? null : _guardar,
+                      icon: _loading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.save),
+                      label: Text(
+                        _loading ? 'Guardando...' : 'Guardar Doctor (SP 1)',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(height: 16),
-
-                      // Campo Ciudad: SOLO LETRAS
-                      TextFormField(
-                        controller: _ciudadCtrl,
-                        keyboardType: TextInputType.text,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
-                        ],
-                        decoration: const InputDecoration(
-                          labelText: 'Ciudad',
-                          hintText: 'Ej. Quito, Guayaquil, Ambato',
-                          prefixIcon: Icon(Icons.location_city, color: _primaryColor),
-                          helperText: 'Solo se permiten letras y espacios',
-                        ),
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
-                            return 'La ciudad es obligatoria';
-                          }
-                          if (val.trim().length < 3) {
-                            return 'Debe ingresar al menos 3 caracteres';
-                          }
-                          if (!RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$').hasMatch(val.trim())) {
-                            return 'Solo se permiten letras y espacios';
-                          }
-                          return null;
-                        },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 2,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: _loading ? null : _guardar,
-                icon: _loading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Icon(Icons.save),
-                label: Text(
-                  _loading ? 'Guardando...' : 'Guardar Doctor',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 2,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 }

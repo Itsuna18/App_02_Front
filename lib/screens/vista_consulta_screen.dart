@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../models/consulta_model.dart';
 
@@ -10,6 +10,9 @@ class VistaConsultaScreen extends StatefulWidget {
 }
 
 class _VistaConsultaScreenState extends State<VistaConsultaScreen> {
+  static const Color _primaryColor = Color(0xFF00796B);
+  static const Color _accentLight = Color(0xFFE0F2F1);
+
   late Future<List<ConsultaGeneral>> _futureConsultas;
   final TextEditingController _searchCtrl = TextEditingController();
   List<ConsultaGeneral> _allConsultas = [];
@@ -61,9 +64,12 @@ class _VistaConsultaScreenState extends State<VistaConsultaScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F7F8),
       appBar: AppBar(
-        title: const Text('Consulta General'),
-        backgroundColor: Colors.blue.shade700,
+        title: const Text('Consulta General (Vista Distribuida)'),
+        backgroundColor: _primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 2,
         actions: [
           IconButton(
             onPressed: _cargar,
@@ -74,19 +80,19 @@ class _VistaConsultaScreenState extends State<VistaConsultaScreen> {
       ),
       body: Column(
         children: [
-          // Barra de búsqueda y filtro
+          // Barra de búsqueda y filtro en estilo Teal
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            color: Colors.blue.shade50,
+            color: _accentLight,
             child: TextField(
               controller: _searchCtrl,
               onChanged: _filtrar,
               decoration: InputDecoration(
-                hintText: 'Buscar por paciente, doctor o especialidad...',
-                prefixIcon: const Icon(Icons.search, color: Colors.blue),
+                hintText: 'Buscar por paciente, doctor, ciudad o especialidad...',
+                prefixIcon: const Icon(Icons.search, color: _primaryColor),
                 suffixIcon: _searchCtrl.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
+                        icon: const Icon(Icons.clear, size: 18, color: _primaryColor),
                         onPressed: () {
                           _searchCtrl.clear();
                           _filtrar('');
@@ -98,11 +104,15 @@ class _VistaConsultaScreenState extends State<VistaConsultaScreen> {
                 contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide(color: Colors.blue.shade200),
+                  borderSide: const BorderSide(color: Color(0xFF80CBC4)),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide(color: Colors.blue.shade200),
+                  borderSide: const BorderSide(color: Color(0xFF80CBC4)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: const BorderSide(color: _primaryColor, width: 2),
                 ),
               ),
             ),
@@ -118,7 +128,7 @@ class _VistaConsultaScreenState extends State<VistaConsultaScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        CircularProgressIndicator(),
+                        CircularProgressIndicator(color: _primaryColor),
                         SizedBox(height: 14),
                         Text('Consultando bases de datos distribuidas...', style: TextStyle(color: Colors.grey)),
                       ],
@@ -145,6 +155,7 @@ class _VistaConsultaScreenState extends State<VistaConsultaScreen> {
                             onPressed: _cargar,
                             icon: const Icon(Icons.refresh),
                             label: const Text('Reintentar'),
+                            style: ElevatedButton.styleFrom(backgroundColor: _primaryColor, foregroundColor: Colors.white),
                           ),
                         ],
                       ),
@@ -173,6 +184,7 @@ class _VistaConsultaScreenState extends State<VistaConsultaScreen> {
                 }
 
                 return RefreshIndicator(
+                  color: _primaryColor,
                   onRefresh: () async => _cargar(),
                   child: ListView.builder(
                     padding: const EdgeInsets.all(12),
@@ -182,6 +194,7 @@ class _VistaConsultaScreenState extends State<VistaConsultaScreen> {
                       return Card(
                         elevation: 2,
                         margin: const EdgeInsets.only(bottom: 14),
+                        color: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         child: Padding(
                           padding: const EdgeInsets.all(16),
@@ -195,7 +208,7 @@ class _VistaConsultaScreenState extends State<VistaConsultaScreen> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: Colors.blue.shade700,
+                                      color: _primaryColor,
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: Text(
@@ -225,11 +238,10 @@ class _VistaConsultaScreenState extends State<VistaConsultaScreen> {
                               ),
                               const Divider(height: 20),
 
-                              // Paciente
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(Icons.person, size: 20, color: Colors.teal),
+                                  const Icon(Icons.person, size: 20, color: _primaryColor),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: RichText(
@@ -245,13 +257,13 @@ class _VistaConsultaScreenState extends State<VistaConsultaScreen> {
                                             child: Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                               decoration: BoxDecoration(
-                                                color: Colors.teal.shade50,
+                                                color: _accentLight,
                                                 borderRadius: BorderRadius.circular(6),
-                                                border: Border.all(color: Colors.teal.shade200),
+                                                border: Border.all(color: const Color(0xFF80CBC4)),
                                               ),
                                               child: Text(
                                                 'Ciudad: ${c.ciudadPaciente}',
-                                                style: TextStyle(fontSize: 11, color: Colors.teal.shade800),
+                                                style: const TextStyle(fontSize: 11, color: _primaryColor, fontWeight: FontWeight.bold),
                                               ),
                                             ),
                                           ),
@@ -263,11 +275,11 @@ class _VistaConsultaScreenState extends State<VistaConsultaScreen> {
                               ),
                               const SizedBox(height: 8),
 
-                              // Doctor
+                              // Doctor (Sitio B)
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(Icons.medical_services, size: 20, color: Colors.indigo),
+                                  const Icon(Icons.medical_services, size: 20, color: _primaryColor),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: RichText(
@@ -283,13 +295,13 @@ class _VistaConsultaScreenState extends State<VistaConsultaScreen> {
                                             child: Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                               decoration: BoxDecoration(
-                                                color: Colors.indigo.shade50,
+                                                color: _accentLight,
                                                 borderRadius: BorderRadius.circular(6),
-                                                border: Border.all(color: Colors.indigo.shade200),
+                                                border: Border.all(color: const Color(0xFF80CBC4)),
                                               ),
                                               child: Text(
                                                 'Ciudad: ${c.ciudadDoctor}',
-                                                style: TextStyle(fontSize: 11, color: Colors.indigo.shade800),
+                                                style: const TextStyle(fontSize: 11, color: _primaryColor, fontWeight: FontWeight.bold),
                                               ),
                                             ),
                                           ),
@@ -315,7 +327,7 @@ class _VistaConsultaScreenState extends State<VistaConsultaScreen> {
                                   children: [
                                     Row(
                                       children: [
-                                        const Icon(Icons.assignment, size: 16, color: Colors.blueGrey),
+                                        const Icon(Icons.assignment, size: 16, color: _primaryColor),
                                         const SizedBox(width: 6),
                                         Expanded(
                                           child: Text(
@@ -325,10 +337,10 @@ class _VistaConsultaScreenState extends State<VistaConsultaScreen> {
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 4),
+                                    const SizedBox(height: 6),
                                     Row(
                                       children: [
-                                        const Icon(Icons.healing, size: 16, color: Colors.orange),
+                                        const Icon(Icons.healing, size: 16, color: _primaryColor),
                                         const SizedBox(width: 6),
                                         Expanded(
                                           child: Text(
