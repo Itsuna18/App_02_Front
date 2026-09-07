@@ -35,7 +35,9 @@ class ConsultaGeneral {
       doctor: json['doctor'] ?? '',
       ciudadDoctor: json['ciudad_doctor'] ?? '',
       especialidad: json['especialidad'] ?? '',
-      fechahora: json['fechahora']?.toString() ?? '',
+      fechahora: (json['fechahora'] != null && json['fechahora'].toString().isNotEmpty)
+          ? json['fechahora'].toString()
+          : '${json['fecha'] ?? ''} ${json['hora'] ?? ''}'.trim(),
       descripcion: json['descripcion'] ?? '',
       tratamiento: json['tratamiento'] ?? '',
     );

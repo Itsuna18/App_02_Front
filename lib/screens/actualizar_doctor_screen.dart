@@ -3,17 +3,29 @@ import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 import '../widgets/especialidad_autocomplete.dart';
 
-class RegistrarDoctorScreen extends StatefulWidget {
+class ActualizarDoctorScreen extends StatefulWidget {
+  final int? initialId;
+  final String? initialNombre;
+  final String? initialEspecialidad;
+  final String? initialCiudad;
   final List<String>? especialidadesDisponibles;
 
-  const RegistrarDoctorScreen({super.key, this.especialidadesDisponibles});
+  const ActualizarDoctorScreen({
+    super.key,
+    this.initialId,
+    this.initialNombre,
+    this.initialEspecialidad,
+    this.initialCiudad,
+    this.especialidadesDisponibles,
+  });
 
   @override
-  State<RegistrarDoctorScreen> createState() => _RegistrarDoctorScreenState();
+  State<ActualizarDoctorScreen> createState() => _ActualizarDoctorScreenState();
 }
 
-class _RegistrarDoctorScreenState extends State<RegistrarDoctorScreen> {
+class _ActualizarDoctorScreenState extends State<ActualizarDoctorScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _idDoctorCtrl = TextEditingController();
   final _nombreCtrl = TextEditingController();
   final _espCtrl = TextEditingController();
   final _ciudadCtrl = TextEditingController();
@@ -22,21 +34,40 @@ class _RegistrarDoctorScreenState extends State<RegistrarDoctorScreen> {
   static const Color _primaryColor = Color(0xFF00796B);
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.initialId != null) {
+      _idDoctorCtrl.text = widget.initialId.toString();
+    }
+    if (widget.initialNombre != null) {
+      _nombreCtrl.text = widget.initialNombre!;
+    }
+    if (widget.initialEspecialidad != null) {
+      _espCtrl.text = widget.initialEspecialidad!;
+    }
+    if (widget.initialCiudad != null) {
+      _ciudadCtrl.text = widget.initialCiudad!;
+    }
+  }
+
+  @override
   void dispose() {
+    _idDoctorCtrl.dispose();
     _nombreCtrl.dispose();
     _espCtrl.dispose();
     _ciudadCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _guardar() async {
+  Future<void> _actualizar() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
     setState(() => _loading = true);
     try {
-      final msg = await ApiService.insertarDoctor(
+      final msg = await ApiService.actualizarDoctor(
+        int.parse(_idDoctorCtrl.text.trim()),
         _nombreCtrl.text.trim(),
         _espCtrl.text.trim(),
         _ciudadCtrl.text.trim(),
@@ -84,9 +115,11 @@ class _RegistrarDoctorScreenState extends State<RegistrarDoctorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isPreselected = widget.initialId != null;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Registrar Doctor'),
+        title: const Text('Actualizar Doctor'),
         backgroundColor: _primaryColor,
       ),
       body: SingleChildScrollView(
@@ -109,7 +142,7 @@ class _RegistrarDoctorScreenState extends State<RegistrarDoctorScreen> {
                         children: [
                           CircleAvatar(
                             backgroundColor: _primaryColor.withValues(alpha: 0.12),
-                            child: const Icon(Icons.person_add, color: _primaryColor),
+                            child: const Icon(Icons.manage_accounts, color: _primaryColor),
                           ),
                           const SizedBox(width: 12),
                           const Expanded(
@@ -117,11 +150,11 @@ class _RegistrarDoctorScreenState extends State<RegistrarDoctorScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Datos del Doctor',
+                                  'Modificar Información',
                                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                                 ),
                                 Text(
-                                  'Ingrese los datos del nuevo médico',
+                                  'Modifique los datos del médico',
                                   style: TextStyle(fontSize: 12, color: Colors.grey),
                                 ),
                               ],
@@ -131,7 +164,38 @@ class _RegistrarDoctorScreenState extends State<RegistrarDoctorScreen> {
                       ),
                       const Divider(height: 28),
 
-                      // Campo Nombre: SOLO LETRAS
+                      // Campo ID Doctor
+                      TextFormField(
+                        controller: _idDoctorCtrl,
+                        readOnly: isPreselected,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        decoration: InputDecoration(
+                          labelText: 'ID del Doctor',
+                          hintText: 'Ej. 1',
+                          prefixIcon: const Icon(Icons.badge, color: _primaryColor),
+                          helperText: isPreselected
+                              ? 'Médico seleccionado para edición'
+                              : 'Solo dígitos numéricos',
+                          filled: isPreselected,
+                          fillColor: isPreselected ? _primaryColor.withValues(alpha: 0.05) : null,
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'El ID del doctor es obligatorio';
+                          }
+                          final num = int.tryParse(val.trim());
+                          if (num == null || num <= 0) {
+                            return 'Ingrese un ID numérico válido mayor a 0';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Campo Nombre del Doctor: SOLO LETRAS
                       TextFormField(
                         controller: _nombreCtrl,
                         keyboardType: TextInputType.name,
@@ -140,7 +204,7 @@ class _RegistrarDoctorScreenState extends State<RegistrarDoctorScreen> {
                         ],
                         decoration: const InputDecoration(
                           labelText: 'Nombre Completo del Doctor',
-                          hintText: 'Ej. Dr. Carlos Andrade',
+                          hintText: 'Ej. Dra. María Elena Solís',
                           prefixIcon: Icon(Icons.person, color: _primaryColor),
                           helperText: 'Solo se permiten letras y espacios',
                         ),
@@ -205,16 +269,16 @@ class _RegistrarDoctorScreenState extends State<RegistrarDoctorScreen> {
               ),
               const SizedBox(height: 24),
               ElevatedButton.icon(
-                onPressed: _loading ? null : _guardar,
+                onPressed: _loading ? null : _actualizar,
                 icon: _loading
                     ? const SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
-                    : const Icon(Icons.save),
+                    : const Icon(Icons.update),
                 label: Text(
-                  _loading ? 'Guardando...' : 'Guardar Doctor',
+                  _loading ? 'Actualizando...' : 'Actualizar Doctor',
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(

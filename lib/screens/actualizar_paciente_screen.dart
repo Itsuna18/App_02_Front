@@ -1,84 +1,106 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/api_service.dart';
-import '../widgets/especialidad_autocomplete.dart';
 
-class RegistrarDoctorScreen extends StatefulWidget {
-  final List<String>? especialidadesDisponibles;
+class ActualizarPacienteScreen extends StatefulWidget {
+  final String initialNombre;
+  final String? initialFechaNacimiento;
+  final String? initialDireccion;
+  final String? initialCiudad;
 
-  const RegistrarDoctorScreen({super.key, this.especialidadesDisponibles});
+  const ActualizarPacienteScreen({
+    super.key,
+    required this.initialNombre,
+    this.initialFechaNacimiento,
+    this.initialDireccion,
+    this.initialCiudad,
+  });
 
   @override
-  State<RegistrarDoctorScreen> createState() => _RegistrarDoctorScreenState();
+  State<ActualizarPacienteScreen> createState() => _ActualizarPacienteScreenState();
 }
 
-class _RegistrarDoctorScreenState extends State<RegistrarDoctorScreen> {
+class _ActualizarPacienteScreenState extends State<ActualizarPacienteScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nombreCtrl = TextEditingController();
-  final _espCtrl = TextEditingController();
-  final _ciudadCtrl = TextEditingController();
+  late final TextEditingController _nombreCtrl;
+  late final TextEditingController _fechaCtrl;
+  late final TextEditingController _dirCtrl;
+  late final TextEditingController _ciudadCtrl;
   bool _loading = false;
 
   static const Color _primaryColor = Color(0xFF00796B);
 
   @override
+  void initState() {
+    super.initState();
+    _nombreCtrl = TextEditingController(text: widget.initialNombre);
+    _fechaCtrl = TextEditingController(text: widget.initialFechaNacimiento ?? '1998-05-15');
+    _dirCtrl = TextEditingController(text: widget.initialDireccion ?? '');
+    _ciudadCtrl = TextEditingController(text: widget.initialCiudad ?? '');
+  }
+
+  @override
   void dispose() {
     _nombreCtrl.dispose();
-    _espCtrl.dispose();
+    _fechaCtrl.dispose();
+    _dirCtrl.dispose();
     _ciudadCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _guardar() async {
+  Future<void> _seleccionarFecha() async {
+    DateTime initial = DateTime.tryParse(_fechaCtrl.text) ?? DateTime(1998, 5, 15);
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      helpText: 'Seleccione Fecha de Nacimiento',
+      cancelText: 'Cancelar',
+      confirmText: 'Aceptar',
+    );
+    if (picked != null) {
+      final y = picked.year.toString().padLeft(4, '0');
+      final m = picked.month.toString().padLeft(2, '0');
+      final d = picked.day.toString().padLeft(2, '0');
+      setState(() {
+        _fechaCtrl.text = '$y-$m-$d';
+      });
+    }
+  }
+
+  Future<void> _actualizar() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
     setState(() => _loading = true);
-    try {
-      final msg = await ApiService.insertarDoctor(
-        _nombreCtrl.text.trim(),
-        _espCtrl.text.trim(),
-        _ciudadCtrl.text.trim(),
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    ApiService.actualizarPacienteLocal(
+      widget.initialNombre,
+      _nombreCtrl.text.trim(),
+      _fechaCtrl.text.trim(),
+      _dirCtrl.text.trim(),
+      _ciudadCtrl.text.trim(),
+    );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 10),
+              Expanded(child: Text('Datos del paciente actualizados correctamente')),
+            ],
+          ),
+          backgroundColor: _primaryColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 10),
-                Expanded(child: Text(msg)),
-              ],
-            ),
-            backgroundColor: _primaryColor,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-        Navigator.pop(context, true);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline, color: Colors.white),
-                const SizedBox(width: 10),
-                Expanded(child: Text(e.toString().replaceAll('Exception: ', ''))),
-              ],
-            ),
-            backgroundColor: Colors.red.shade700,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
+      Navigator.pop(context, true);
     }
   }
 
@@ -86,7 +108,7 @@ class _RegistrarDoctorScreenState extends State<RegistrarDoctorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Registrar Doctor'),
+        title: const Text('Actualizar Paciente'),
         backgroundColor: _primaryColor,
       ),
       body: SingleChildScrollView(
@@ -109,7 +131,7 @@ class _RegistrarDoctorScreenState extends State<RegistrarDoctorScreen> {
                         children: [
                           CircleAvatar(
                             backgroundColor: _primaryColor.withValues(alpha: 0.12),
-                            child: const Icon(Icons.person_add, color: _primaryColor),
+                            child: const Icon(Icons.manage_accounts, color: _primaryColor),
                           ),
                           const SizedBox(width: 12),
                           const Expanded(
@@ -117,11 +139,11 @@ class _RegistrarDoctorScreenState extends State<RegistrarDoctorScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Datos del Doctor',
+                                  'Modificar Paciente',
                                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                                 ),
                                 Text(
-                                  'Ingrese los datos del nuevo médico',
+                                  'Actualice la información del paciente',
                                   style: TextStyle(fontSize: 12, color: Colors.grey),
                                 ),
                               ],
@@ -131,7 +153,7 @@ class _RegistrarDoctorScreenState extends State<RegistrarDoctorScreen> {
                       ),
                       const Divider(height: 28),
 
-                      // Campo Nombre: SOLO LETRAS
+                      // Campo Nombre del Paciente: SOLO LETRAS
                       TextFormField(
                         controller: _nombreCtrl,
                         keyboardType: TextInputType.name,
@@ -139,8 +161,8 @@ class _RegistrarDoctorScreenState extends State<RegistrarDoctorScreen> {
                           FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
                         ],
                         decoration: const InputDecoration(
-                          labelText: 'Nombre Completo del Doctor',
-                          hintText: 'Ej. Dr. Carlos Andrade',
+                          labelText: 'Nombre Completo del Paciente',
+                          hintText: 'Ej. Juan Antonio Pérez',
                           prefixIcon: Icon(Icons.person, color: _primaryColor),
                           helperText: 'Solo se permiten letras y espacios',
                         ),
@@ -159,17 +181,53 @@ class _RegistrarDoctorScreenState extends State<RegistrarDoctorScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Campo Especialidad: COMBO AUTOCOMPLETO + SOLO LETRAS
-                      EspecialidadAutocomplete(
-                        controller: _espCtrl,
-                        primaryColor: _primaryColor,
-                        especialidadesDisponibles: widget.especialidadesDisponibles ?? const [
-                          'Cardiología',
-                          'Pediatría',
-                          'Medicina General',
-                          'Especialidad 1',
-                          'Especialidad 2',
-                        ],
+                      // Campo Fecha de Nacimiento
+                      TextFormField(
+                        controller: _fechaCtrl,
+                        keyboardType: TextInputType.datetime,
+                        decoration: InputDecoration(
+                          labelText: 'Fecha de Nacimiento',
+                          hintText: 'AAAA-MM-DD',
+                          prefixIcon: const Icon(Icons.calendar_month, color: _primaryColor),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.edit_calendar, color: _primaryColor),
+                            onPressed: _seleccionarFecha,
+                            tooltip: 'Seleccionar fecha',
+                          ),
+                          helperText: 'Formato: AAAA-MM-DD',
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'La fecha de nacimiento es obligatoria';
+                          }
+                          final regex = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+                          if (!regex.hasMatch(val.trim())) {
+                            return 'Formato inválido. Use AAAA-MM-DD';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Campo Dirección
+                      TextFormField(
+                        controller: _dirCtrl,
+                        keyboardType: TextInputType.streetAddress,
+                        decoration: const InputDecoration(
+                          labelText: 'Dirección Domiciliaria',
+                          hintText: 'Ej. Av. 9 de Octubre y Malecón',
+                          prefixIcon: Icon(Icons.home, color: _primaryColor),
+                          helperText: 'Dirección de residencia',
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'La dirección es obligatoria';
+                          }
+                          if (val.trim().length < 4) {
+                            return 'Debe ingresar una dirección más detallada';
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 16),
 
@@ -182,7 +240,7 @@ class _RegistrarDoctorScreenState extends State<RegistrarDoctorScreen> {
                         ],
                         decoration: const InputDecoration(
                           labelText: 'Ciudad',
-                          hintText: 'Ej. Quito, Guayaquil, Ambato',
+                          hintText: 'Ej. Guayaquil, Quito, Ambato',
                           prefixIcon: Icon(Icons.location_city, color: _primaryColor),
                           helperText: 'Solo se permiten letras y espacios',
                         ),
@@ -205,16 +263,16 @@ class _RegistrarDoctorScreenState extends State<RegistrarDoctorScreen> {
               ),
               const SizedBox(height: 24),
               ElevatedButton.icon(
-                onPressed: _loading ? null : _guardar,
+                onPressed: _loading ? null : _actualizar,
                 icon: _loading
                     ? const SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
-                    : const Icon(Icons.save),
+                    : const Icon(Icons.update),
                 label: Text(
-                  _loading ? 'Guardando...' : 'Guardar Doctor',
+                  _loading ? 'Actualizando...' : 'Actualizar Paciente',
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
